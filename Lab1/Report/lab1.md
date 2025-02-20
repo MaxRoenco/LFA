@@ -260,5 +260,11 @@ String belongs to language: True
 
 When testing manually with valid strings like "dad", "dabcad", or invalid strings like "abc", the automaton correctly identifies whether they belong to the language or not.
 
+## Results with Manual Testing
+
+![Valid string test](images/test1.png)
+
+![Invalid string test](images/test2.png)
+
 ## References
 [1] DSL_laboratory_works: Intro to formal languages. Regular grammars. Finite Automata. - Crețu Dumitru, Drumea Vasile, Cojuhari Irina - https://github.com/filpatterson/DSL_laboratory_works/blob/master/1_RegularGrammars/task.md
