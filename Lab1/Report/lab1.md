@@ -60,36 +60,36 @@ p = {                             # Production rules
 }
 s = "S"                           # Start symbol
 ```
+### **2. String Generation by Grammar**  
 
-### String Generation by Grammar
+This function **generates a valid string** by recursively replacing non-terminals using production rules.  
+
 ```python
 def create_word(self):
     import random
-    
     word_in_progress = self.S
-    print("\nGenerating word:", word_in_progress)
-    
-    while True:
-        found_non_terminal = False
+
+    while any(c in self.VN for c in word_in_progress):
         for i, current_char in enumerate(word_in_progress):
             if current_char in self.VN:
-                found_non_terminal = True
-                rules = self.P.get(current_char, [])
-                if not rules:
-                    continue
-                
-                used_replacement = random.choice(rules)
+                used_replacement = random.choice(self.P.get(current_char, []))
                 word_in_progress = word_in_progress[:i] + used_replacement + word_in_progress[i+1:]
-                print(" =>", word_in_progress)
                 break
-        
-        if not found_non_terminal:
-            break
-    
+
     return word_in_progress
 ```
 
-### Grammar Conversion to FA
+#### **Description:**  
+- Starts with the **start symbol**.  
+- Replaces non-terminals using **random production rules**.  
+- Continues until the string has **only terminal symbols**.  
+
+---
+
+### **3. Grammar to Finite Automaton Conversion**  
+
+This function **converts a Grammar to a Finite Automaton (FA)** by mapping production rules to state transitions.  
+
 ```python
 def to_finite_automaton(self):
     q_f = {"q_F"}
@@ -97,7 +97,7 @@ def to_finite_automaton(self):
     sigma = self.VT.copy()
     q0 = self.S
     delta = {}
-    
+
     for key, products in self.P.items():
         for product in products:
             terminal = product[0]
@@ -106,52 +106,52 @@ def to_finite_automaton(self):
             if terminal not in self.VT:
                 continue
             
-            state_transitions = delta.get(key, {})
-            target_states = state_transitions.get(terminal, set())
-            target_states.add(non_terminal)
-            state_transitions[terminal] = target_states
-            delta[key] = state_transitions
-    
+            delta.setdefault(key, {}).setdefault(terminal, set()).add(non_terminal)
+
     return FiniteAutomaton(q, sigma, delta, q0, q_f)
 ```
 
-### String Recognition
+#### **Description:**  
+- **States (Q)**: Non-terminals + final state **q_F**.  
+- **Alphabet (Σ)**: Terminals.  
+- **Transitions (δ)**: Mapped from **grammar rules**.  
+- **Initial state (q₀)**: Start symbol.  
+- **Final states (F)**: Only **q_F**.  
+
+---
+
+### **4. String Recognition in Finite Automaton**  
+
+Checks if a **given input string belongs** to the **language** using the FA.  
+
 ```python
 def does_string_belong_to_language(self, input_string):
     current_states = {self.Q0}
-    print(f"\nChecking string: \"{input_string}\"")
-    
+
     for letter in input_string:
-        print(f"Processing letter: \"{letter}\"")
         if letter not in self.Sigma:
-            print(f"Invalid character \"{letter}\".")
             return False
         
-        next_states = set()
-        for state in current_states:
-            if state in self.Delta and letter in self.Delta[state]:
-                next_states.update(self.Delta[state][letter])
-        
+        next_states = {s for state in current_states if state in self.Delta and letter in self.Delta[state] for s in self.Delta[state][letter]}
+
         if not next_states:
-            print(f"No valid transitions found. \"{input_string}\" is INVALID.")
             return False
         
         current_states = next_states
-        print(f"Possible next states: {', '.join(current_states)}")
-    
-    is_valid = any(state in self.QF for state in current_states)
-    print(f"Final states: {', '.join(current_states)}")
-    print(f"Result: \"{input_string}\" is {'VALID ✓' if is_valid else 'INVALID ✗'}")
-    return is_valid
+
+    return any(state in self.QF for state in current_states)
 ```
+
+#### **Description:**  
+- Starts in **initial state (q₀)**.  
+- Reads each **symbol** in the string, following **valid transitions**.  
+- If it reaches a **final state**, the string is **valid**; otherwise, it is **invalid**.  
+
+---
 
 ## Conclusions / Screenshots / Results
 
-The implementation successfully:
-1. Represents a regular grammar as defined by Variant 25
-2. Generates valid strings according to the grammar
-3. Converts the grammar to a finite automaton
-4. Verifies whether input strings belong to the language defined by the automaton
+The implementation of this project successfully demonstrates the core concepts of formal languages, regular grammars, and finite automata. By defining a grammar with a structured set of production rules, the system is able to generate valid strings that belong to the language. The conversion from grammar to a finite automaton ensures a formal way of recognizing strings, allowing for automated validation of input sequences. The testing phase confirms that the automaton correctly identifies whether a given string adheres to the defined language rules. This work provides a strong foundation for understanding computational models and their practical applications, particularly in lexical analysis and pattern recognition.
 
 Sample output:
 
