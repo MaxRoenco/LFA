@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finite Automaton Analysis</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 15px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .canvas-container {
+            margin: 20px 0;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        canvas {
+            display: block;
+            margin: 0 auto;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .result-section {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #e9f7ef;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Finite Automaton Analysis</h1>
+        
+        <h2>Original Finite Automaton (Variant 25)</h2>
+        <div>
+            <p><strong>States:</strong> Q = {q0, q1, q2, q3}</p>
+            <p><strong>Alphabet:</strong> ∑ = {a, b}</p>
+            <p><strong>Initial state:</strong> q0</p>
+            <p><strong>Final states:</strong> F = {q2}</p>
+            <p><strong>Transitions:</strong></p>
+            <ul>
+                <li>δ(q0, a) = q0</li>
+                <li>δ(q0, a) = q1</li>
+                <li>δ(q1, a) = q2</li>
+                <li>δ(q1, b) = q1</li>
+                <li>δ(q2, a) = q3</li>
+                <li>δ(q3, a) = q1</li>
+            </ul>
+        </div>
+
+        <div class="canvas-container">
+            <h3>Visual Representation</h3>
+            <canvas id="faCanvas" width="700" height="500"></canvas>
+        </div>
+
+        <div class="result-section">
+            <h2>Analysis Results</h2>
+            <div id="determinismResult"></div>
+            <div id="regularGrammarResult"></div>
+            <div id="chomskyClassification"></div>
+        </div>
+
+        <h2>Conversion to DFA</h2>
+        <div id="dfaResult"></div>
+
+        <div class="canvas-container">
+            <h3>DFA Visual Representation</h3>
+            <canvas id="dfaCanvas" width="700" height="500"></canvas>
+        </div>
+
+        <button id="analyzeBtn">Analyze Automaton</button>
+    </div>
+
+    <script>
+        class FiniteAutomaton {
+            constructor(states, alphabet, transitions, initialState, finalStates) {
+                this.states = states;
+                this.alphabet = alphabet;
+                this.transitions = transitions;
+                this.initialState = initialState;
+                this.finalStates = finalStates;
+            }
+            isDeterministic() {
+                for (const state of this.states) {
+                    for (const symbol of this.alphabet) {
+                        const nextStates = this.getNextStates(state, symbol);
+                        if (nextStates.length > 1) {
+                            return false;
+                        }
+                    }
+                }
+                return true;
+            }
+            getNextStates(state, symbol) {
+                const nextStates = [];
+                for (const transition of this.transitions) {
+                    if (transition.from === state && transition.symbol === symbol) {
+                        nextStates.push(transition.to);
+                    }
+                }
+                return nextStates;
+            }
+            toRegularGrammar() {
+                const grammar = {
+                    nonTerminals: [...this.states],
+                    terminals: [...this.alphabet],
+                    productions: [],
+                    startSymbol: this.initialState
+                };
+
+                for (const transition of this.transitions) {
+                    grammar.productions.push({
+                        from: transition.from,
+                        to: transition.symbol + transition.to
+                    });
+                }
+
+                for (const finalState of this.finalStates) {
+                    grammar.productions.push({
+                        from: finalState,
+                        to: "ε"
+                    });
+                }
+
+                return grammar;
+            }
+
+            classifyGrammar() {
+                const grammar = this.toRegularGrammar();
+                const isRegular = true;
+
+                return {
+                    type: 3,
+                    name: "Regular Grammar (Type-3)",
+                    description: "All productions are either of the form A → aB or A → a, where A, B are non-terminals and a is a terminal."
+                };
+            }
+
+            toDFA() {
+                const dfa = {
+                    states: [],
+                    alphabet: [...this.alphabet],
+                    transitions: [],
+                    initialState: JSON.stringify([this.initialState]),
+                    finalStates: []
+                };
+
+                const unprocessedStates = [JSON.stringify([this.initialState])];
+                const processedStates = new Set();
+
+                while (unprocessedStates.length > 0) {
+                    const currentStateSet = JSON.parse(unprocessedStates.pop());
+                    const currentStateStr = JSON.stringify(currentStateSet);
+                    
+                    if (processedStates.has(currentStateStr)) {
+                        continue;
+                    }
+                    
+                    processedStates.add(currentStateStr);
+                    dfa.states.push(currentStateStr);
+
+                    if (currentStateSet.some(state => this.finalStates.includes(state))) {
+                        dfa.finalStates.push(currentStateStr);
+                    }
+
+                    for (const symbol of this.alphabet) {
+                        const nextStateSet = new Set();
+
+                        for (const state of currentStateSet) {
+                            const nextStates = this.getNextStates(state, symbol);
+                            for (const nextState of nextStates) {
+                                nextStateSet.add(nextState);
+                            }
+                        }
+                        
+                        if (nextStateSet.size > 0) {
+                            const nextStateArray = Array.from(nextStateSet).sort();
+                            const nextStateStr = JSON.stringify(nextStateArray);
+
+                            dfa.transitions.push({
+                                from: currentStateStr,
+                                symbol: symbol,
+                                to: nextStateStr
+                            });
+
+                            if (!processedStates.has(nextStateStr)) {
+                                unprocessedStates.push(nextStateStr);
+                            }
+                        }
+                    }
+                }
+                
+                return dfa;
+            }
+        }
+
+        const fa = new FiniteAutomaton(
+            ['q0', 'q1', 'q2', 'q3'],
+            ['a', 'b'],
+            [
+                { from: 'q0', symbol: 'a', to: 'q0' },
+                { from: 'q0', symbol: 'a', to: 'q1' },
+                { from: 'q1', symbol: 'a', to: 'q2' },
+                { from: 'q1', symbol: 'b', to: 'q1' },
+                { from: 'q2', symbol: 'a', to: 'q3' },
+                { from: 'q3', symbol: 'a', to: 'q1' }
+            ],
+            'q0',
+            ['q2']
+        );
+
+        function drawAutomaton(fa, canvasId, isDFA = false) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const stateCoords = {};
+            const radius = 30;
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const stateCount = fa.states.length;
+            
+            let states = fa.states;
+            if (isDFA) {
+                states = states.map((state, index) => {
+                    return { original: state, simplified: 'd' + index };
+                });
+            }
+
+            for (let i = 0; i < states.length; i++) {
+                const angle = (2 * Math.PI * i) / states.length - Math.PI / 2;
+                const x = centerX + Math.cos(angle) * 150;
+                const y = centerY + Math.sin(angle) * 150;
+                
+                if (isDFA) {
+                    stateCoords[states[i].original] = { x, y };
+                } else {
+                    stateCoords[states[i]] = { x, y };
+                }
+            }
+
+            ctx.strokeStyle = 'black';
+            ctx.fillStyle = 'black';
+            ctx.lineWidth = 1;
+            
+            for (const transition of fa.transitions) {
+                const fromState = isDFA ? transition.from : transition.from;
+                const toState = isDFA ? transition.to : transition.to;
+                
+                const from = stateCoords[fromState];
+                const to = stateCoords[toState];
+                
+                if (fromState === toState) {
+                    ctx.beginPath();
+                    ctx.arc(from.x, from.y - radius - 10, radius / 2, 0, 2 * Math.PI);
+                    ctx.stroke();
+
+                    ctx.beginPath();
+                    ctx.moveTo(from.x, from.y - radius);
+                    ctx.lineTo(from.x - 5, from.y - radius - 10);
+                    ctx.lineTo(from.x + 5, from.y - radius - 10);
+                    ctx.fill();
+
+                    ctx.fillText(transition.symbol, from.x, from.y - radius * 2);
+                } else {
+                    const angle = Math.atan2(to.y - from.y, to.x - from.x);
+                    const fromX = from.x + radius * Math.cos(angle);
+                    const fromY = from.y + radius * Math.sin(angle);
+                    const toX = to.x - radius * Math.cos(angle);
+                    const toY = to.y - radius * Math.sin(angle);
+
+                    ctx.beginPath();
+                    ctx.moveTo(fromX, fromY);
+                    ctx.lineTo(toX, toY);
+                    ctx.stroke();
+
+                    ctx.beginPath();
+                    ctx.moveTo(toX, toY);
+                    ctx.lineTo(toX - 15 * Math.cos(angle - Math.PI / 6), toY - 15 * Math.sin(angle - Math.PI / 6));
+                    ctx.lineTo(toX - 15 * Math.cos(angle + Math.PI / 6), toY - 15 * Math.sin(angle + Math.PI / 6));
+                    ctx.fill();
+
+                    const textX = (fromX + toX) / 2 + 10 * Math.sin(angle);
+                    const textY = (fromY + toY) / 2 - 10 * Math.cos(angle);
+                    ctx.fillText(transition.symbol, textX, textY);
+                }
+            }
+
+            ctx.font = '16px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            for (let i = 0; i < states.length; i++) {
+                const state = isDFA ? states[i].original : states[i];
+                const stateLabel = isDFA ? states[i].simplified : states[i];
+                const { x, y } = stateCoords[state];
+
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, 2 * Math.PI);
+                ctx.strokeStyle = 'black';
+                ctx.stroke();
+
+                if (fa.finalStates.includes(state)) {
+                    ctx.beginPath();
+                    ctx.arc(x, y, radius - 5, 0, 2 * Math.PI);
+                    ctx.stroke();
+                }
+
+                if (state === fa.initialState) {
+                    ctx.beginPath();
+                    ctx.moveTo(x - radius - 20, y);
+                    ctx.lineTo(x - radius, y);
+                    ctx.stroke();
+
+                    ctx.beginPath();
+                    ctx.moveTo(x - radius, y);
+                    ctx.lineTo(x - radius - 10, y - 5);
+                    ctx.lineTo(x - radius - 10, y + 5);
+                    ctx.fill();
+                }
+
+                ctx.fillStyle = 'black';
+                ctx.fillText(stateLabel, x, y);
+            }
+        }
+
+        document.getElementById('analyzeBtn').addEventListener('click', function() {
+            const isDeterministic = fa.isDeterministic();
+            document.getElementById('determinismResult').innerHTML = `
+                <h3>Determinism Check</h3>
+                <p>The finite automaton is ${isDeterministic ? 'deterministic' : 'non-deterministic'}.</p>
+                ${!isDeterministic ? '<p>Reason: There are multiple transitions from state q0 with the same input symbol \'a\'.</p>' : ''}
+            `;
+
+            const grammar = fa.toRegularGrammar();
+            let grammarHtml = `
+                <h3>Equivalent Regular Grammar</h3>
+                <p><strong>Non-terminals:</strong> {${grammar.nonTerminals.join(', ')}}</p>
+                <p><strong>Terminals:</strong> {${grammar.terminals.join(', ')}}</p>
+                <p><strong>Start symbol:</strong> ${grammar.startSymbol}</p>
+                <p><strong>Productions:</strong></p>
+                <ul>
+            `;
+            
+            for (const production of grammar.productions) {
+                grammarHtml += `<li>${production.from} → ${production.to}</li>`;
+            }
+            
+            grammarHtml += '</ul>';
+            document.getElementById('regularGrammarResult').innerHTML = grammarHtml;
+
+            const classification = fa.classifyGrammar();
+            document.getElementById('chomskyClassification').innerHTML = `
+                <h3>Chomsky Hierarchy Classification</h3>
+                <p>The grammar is classified as: <strong>${classification.name}</strong></p>
+                <p>${classification.description}</p>
+            `;
+
+            const dfa = fa.toDFA();
+
+            const simplifiedStates = {};
+            dfa.states.forEach((state, index) => {
+                simplifiedStates[state] = 'd' + index;
+            });
+            
+            let dfaHtml = `
+                <h3>Converted Deterministic Finite Automaton</h3>
+                <p><strong>States:</strong> {${dfa.states.map((s, i) => 'd' + i + ' = ' + s).join(', ')}}</p>
+                <p><strong>Alphabet:</strong> {${dfa.alphabet.join(', ')}}</p>
+                <p><strong>Initial state:</strong> ${simplifiedStates[dfa.initialState]}</p>
+                <p><strong>Final states:</strong> {${dfa.finalStates.map(s => simplifiedStates[s]).join(', ')}}</p>
+                <p><strong>Transitions:</strong></p>
+                <table>
+                    <tr>
+                        <th>From</th>
+                        <th>Symbol</th>
+                        <th>To</th>
+                    </tr>
+            `;
+            
+            for (const transition of dfa.transitions) {
+                dfaHtml += `
+                    <tr>
+                        <td>${simplifiedStates[transition.from]}</td>
+                        <td>${transition.symbol}</td>
+                        <td>${simplifiedStates[transition.to]}</td>
+                    </tr>
+                `;
+            }
+            
+            dfaHtml += '</table>';
+            document.getElementById('dfaResult').innerHTML = dfaHtml;
+
+            drawAutomaton(fa, 'faCanvas');
+            drawAutomaton(dfa, 'dfaCanvas', true);
+        });
+
+        drawAutomaton(fa, 'faCanvas');
+    </script>
+</body>
+</html>
+
+
+
