@@ -1,7 +1,7 @@
 # Lexer Implementation Report
 ## Formal Languages & Finite Automata
 
-**Author:** Cretu Dumitru  
+**Author:** Roenco Maxim  
 **Date:** March 31, 2025  
 **Course:** Formal Languages & Finite Automata
 
