@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lexer & Scanner Implementation</title>
+    <style>
+        :root {
+            --primary: #3a86ff;
+            --secondary: #8338ec;
+            --success: #06d6a0;
+            --warning: #ffbe0b;
+            --danger: #ef476f;
+            --dark: #212529;
+            --light: #f8f9fa;
+            --code-bg: #282a36;
+            --token-keyword: #ff79c6;
+            --token-identifier: #8be9fd;
+            --token-number: #bd93f9;
+            --token-string: #f1fa8c;
+            --token-operator: #ff5555;
+            --token-delimiter: #6272a4;
+            --token-function: #50fa7b;
+            --token-comment: #6272a4;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--light);
+            color: var(--dark);
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding: 1rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h1, h2, h3 {
+            margin-bottom: 1rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 1rem;
+            background-color: var(--primary);
+            color: white;
+            font-weight: bold;
+        }
+
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+
+        textarea, input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        textarea {
+            min-height: 150px;
+            font-family: 'Consolas', 'Courier New', monospace;
+        }
+
+        .btn {
+            display: inline-block;
+            font-weight: 400;
+            text-align: center;
+            white-space: nowrap;
+            vertical-align: middle;
+            user-select: none;
+            border: 1px solid transparent;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            line-height: 1.5;
+            border-radius: 0.25rem;
+            transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            color: #fff;
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .btn-primary:hover {
+            background-color: #2970e6;
+            border-color: #2970e6;
+        }
+
+        .btn-block {
+            display: block;
+            width: 100%;
+        }
+
+        .token-display {
+            overflow-x: auto;
+            border-radius: 4px;
+            margin-top: 1rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            background-color: white;
+        }
+
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border: 1px solid #dee2e6;
+        }
+
+        th {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        .token-keyword { color: var(--token-keyword); }
+        .token-identifier { color: var(--token-identifier); }
+        .token-number { color: var(--token-number); }
+        .token-string { color: var(--token-string); }
+        .token-operator { color: var(--token-operator); }
+        .token-delimiter { color: var(--token-delimiter); }
+        .token-function { color: var(--token-function); }
+        .token-comment { color: var(--token-comment); }
+
+        pre {
+            background-color: var(--code-bg);
+            color: white;
+            padding: 1rem;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        code {
+            font-family: 'Consolas', 'Courier New', monospace;
+        }
+
+        .examples {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .example-btn {
+            padding: 0.5rem 1rem;
+            background-color: var(--light);
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .example-btn:hover {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 2rem;
+            padding: 1rem;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 1rem;
+        }
+
+        .tab {
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            border: 1px solid #dee2e6;
+            background-color: #f8f9fa;
+        }
+
+        .tab.active {
+            background-color: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Lexer & Scanner</h1>
+        </header>
+
+        <div class="card">
+            <div class="card-header">
+                Input Code
+            </div>
+            <div class="card-body">
+                <div class="examples">
+                    <button class="example-btn" id="example1">Example 1: Basic Math</button>
+                    <button class="example-btn" id="example2">Example 2: Functions</button>
+                    <button class="example-btn" id="example3">Example 3: Control Flow</button>
+                </div>
+                <div class="form-group">
+                    <label for="code-input">Enter code to analyze:</label>
+                    <textarea id="code-input" placeholder="Enter your code here..."></textarea>
+                </div>
+                <button class="btn btn-primary btn-block" id="analyze-btn">Analyze Code</button>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" data-tab="tokens">Tokens</div>
+            <div class="tab" data-tab="documentation">Documentation</div>
+        </div>
+
+        <div class="tab-content active" id="tokens-tab">
+            <div class="card">
+                <div class="card-header">
+                    Lexical Analysis Results
+                </div>
+                <div class="card-body">
+                    <div class="token-display">
+                        <table id="token-table">
+                            <thead>
+                                <tr>
+                                    <th>Token Type</th>
+                                    <th>Value</th>
+                                    <th>Position</th>
+                                </tr>
+                            </thead>
+                            <tbody id="token-list">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="documentation-tab">
+            <div class="card">
+                <div class="card-header">
+                    Documentation
+                </div>
+                <div class="card-body">
+                    <h2>About the Lexer</h2>
+                    <p>This lexer implementation demonstrates the process of lexical analysis for a programming language.</p>
+                    
+                    <h3>Features</h3>
+                    <ul>
+                        <li>Tokenizes mathematical expressions (including integers and floats)</li>
+                        <li>Supports trigonometric functions (sin, cos, tan)</li>
+                        <li>Recognizes variable declarations and assignments</li>
+                        <li>Handles control flow statements (if, else, while)</li>
+                        <li>Supports strings and comments</li>
+                    </ul>
+                    
+                    <h3>Token Types</h3>
+                    <ul>
+                        <li><span class="token-keyword">KEYWORD</span> - Reserved words like if, else, while</li>
+                        <li><span class="token-identifier">IDENTIFIER</span> - Variable and function names</li>
+                        <li><span class="token-number">NUMBER</span> - Integer and floating-point numbers</li>
+                        <li><span class="token-string">STRING</span> - Text enclosed in quotes</li>
+                        <li><span class="token-operator">OPERATOR</span> - Mathematical and logical operators</li>
+                        <li><span class="token-delimiter">DELIMITER</span> - Syntax elements like parentheses and braces</li>
+                        <li><span class="token-function">FUNCTION</span> - Built-in functions like sin, cos</li>
+                        <li><span class="token-comment">COMMENT</span> - Single and multi-line comments</li>
+                    </ul>
+                    
+                    <h3>How It Works</h3>
+                    <p>The lexer scans the input text character by character and identifies tokens based on patterns:</p>
+                    <ol>
+                        <li>The scanner reads each character and groups them based on lexical rules</li>
+                        <li>Each group is classified as a specific token type</li>
+                        <li>The position information is stored to help with error reporting</li>
+                        <li>The sequence of tokens can be used for parsing in a compiler/interpreter</li>
+                    </ol>
+                    
+                    <h3>Implementation Details</h3>
+                    <pre><code>// TokenType enum defines all possible token types
+const TokenType = {
+    KEYWORD: 'KEYWORD',
+    IDENTIFIER: 'IDENTIFIER',
+    NUMBER: 'NUMBER',
+    STRING: 'STRING',
+    OPERATOR: 'OPERATOR',
+    DELIMITER: 'DELIMITER',
+    FUNCTION: 'FUNCTION',
+    COMMENT: 'COMMENT',
+    EOF: 'EOF'
+};
+
+// The Lexer class handles the tokenization process
+class Lexer {
+    constructor(input) {
+        this.input = input;
+        this.position = 0;
+        this.line = 1;
+        this.column = 1;
+        this.currentChar = this.input.length > 0 ? this.input[0] : null;
+    }
+    
+    // ... methods for advancing, peeking, and token recognition ...
+}</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Formal Languages & Finite Automata course | Author: Roenco Maxim | March 2025</p>
+        </div>
+    </div>
+    
+    <script>
+        const TokenType = {
+            KEYWORD: 'KEYWORD',
+            IDENTIFIER: 'IDENTIFIER',
+            NUMBER: 'NUMBER',
+            STRING: 'STRING',
+            OPERATOR: 'OPERATOR',
+            DELIMITER: 'DELIMITER',
+            FUNCTION: 'FUNCTION',
+            COMMENT: 'COMMENT',
+            EOF: 'EOF'
+        };
+
+        class Token {
+            constructor(type, value, line, column) {
+                this.type = type;
+                this.value = value;
+                this.line = line;
+                this.column = column;
+            }
+
+            toString() {
+                return `Token(${this.type}, "${this.value}", ${this.line}:${this.column})`;
+            }
+        }
+
+        class Lexer {
+            constructor(input) {
+                this.input = input;
+                this.position = 0;
+                this.line = 1;
+                this.column = 1;
+                this.currentChar = this.input.length > 0 ? this.input[0] : null;
+
+                this.keywords = [
+                    'if', 'else', 'while', 'for', 'return',
+                    'function', 'var', 'let', 'const',
+                    'true', 'false', 'null'
+                ];
+
+                this.mathFunctions = [
+                    'sin', 'cos', 'tan', 'sqrt', 'log', 'exp'
+                ];
+            }
+
+            advance() {
+                if (this.currentChar === '\n') {
+                    this.line++;
+                    this.column = 1;
+                } else {
+                    this.column++;
+                }
+                
+                this.position++;
+                if (this.position < this.input.length) {
+                    this.currentChar = this.input[this.position];
+                } else {
+                    this.currentChar = null;
+                }
+            }
+
+            peek() {
+                const peekPos = this.position + 1;
+                if (peekPos >= this.input.length) {
+                    return null;
+                }
+                return this.input[peekPos];
+            }
+
+            skipWhitespace() {
+                while (this.currentChar !== null && /\s/.test(this.currentChar)) {
+                    this.advance();
+                }
+            }
+
+            skipComment() {
+                let comment = '';
+                const startLine = this.line;
+                const startColumn = this.column;
+                
+                if (this.currentChar === '/' && this.peek() === '/') {
+                    comment += this.currentChar;
+                    this.advance();
+                    comment += this.currentChar;
+                    this.advance();
+                    
+                    while (this.currentChar !== null && this.currentChar !== '\n') {
+                        comment += this.currentChar;
+                        this.advance();
+                    }
+                    
+                    return new Token(TokenType.COMMENT, comment, startLine, startColumn);
+                }
+
+                if (this.currentChar === '/' && this.peek() === '*') {
+                    comment += this.currentChar;
+                    this.advance();
+                    comment += this.currentChar;
+                    this.advance();
+                    
+                    while (this.currentChar !== null) {
+                        if (this.currentChar === '*' && this.peek() === '/') {
+                            comment += this.currentChar;
+                            this.advance();
+                            comment += this.currentChar;
+                            this.advance();
+                            break;
+                        }
+                        
+                        comment += this.currentChar;
+                        this.advance();
+                    }
+                    
+                    return new Token(TokenType.COMMENT, comment, startLine, startColumn);
+                }
+                
+                return null;
+            }
+
+            number() {
+                let result = '';
+                const startLine = this.line;
+                const startColumn = this.column;
+                
+                while (this.currentChar !== null && /\d/.test(this.currentChar)) {
+                    result += this.currentChar;
+                    this.advance();
+                }
+
+                if (this.currentChar === '.' && this.peek() !== null && /\d/.test(this.peek())) {
+                    result += this.currentChar; 
+                    this.advance();
+                    
+                    while (this.currentChar !== null && /\d/.test(this.currentChar)) {
+                        result += this.currentChar;
+                        this.advance();
+                    }
+                }
+
+                if (this.currentChar !== null && (this.currentChar === 'e' || this.currentChar === 'E')) {
+                    result += this.currentChar;
+                    this.advance();
+
+                    if (this.currentChar !== null && (this.currentChar === '+' || this.currentChar === '-')) {
+                        result += this.currentChar;
+                        this.advance();
+                    }
+
+                    if (this.currentChar !== null && /\d/.test(this.currentChar)) {
+                        while (this.currentChar !== null && /\d/.test(this.currentChar)) {
+                            result += this.currentChar;
+                            this.advance();
+                        }
+                    } else {
+                        throw new Error(`Invalid number format at line ${this.line}, column ${this.column}`);
+                    }
+                }
+                
+                return new Token(TokenType.NUMBER, result, startLine, startColumn);
+            }
+
+            identifier() {
+                let result = '';
+                const startLine = this.line;
+                const startColumn = this.column;
+                
+                while (this.currentChar !== null && /[a-zA-Z0-9_]/.test(this.currentChar)) {
+                    result += this.currentChar;
+                    this.advance();
+                }
+
+                if (this.keywords.includes(result)) {
+                    return new Token(TokenType.KEYWORD, result, startLine, startColumn);
+                }
+
+                if (this.mathFunctions.includes(result)) {
+                    return new Token(TokenType.FUNCTION, result, startLine, startColumn);
+                }
+                
+                return new Token(TokenType.IDENTIFIER, result, startLine, startColumn);
+            }
+
+            string() {
+                let result = '';
+                const startLine = this.line;
+                const startColumn = this.column;
+                const quote = this.currentChar;
+
+                this.advance();
+                
+                while (this.currentChar !== null && this.currentChar !== quote) {
+                    if (this.currentChar === '\\') {
+                        this.advance();
+                        
+                        if (this.currentChar === 'n') result += '\n';
+                        else if (this.currentChar === 't') result += '\t';
+                        else if (this.currentChar === 'r') result += '\r';
+                        else if (this.currentChar === quote) result += quote;
+                        else if (this.currentChar === '\\') result += '\\';
+                        else {
+                            throw new Error(`Invalid escape sequence at line ${this.line}, column ${this.column}`);
+                        }
+                    } else {
+                        result += this.currentChar;
+                    }
+                    
+                    this.advance();
+                }
+
+                if (this.currentChar === quote) {
+                    this.advance();
+                } else {
+                    throw new Error(`Unterminated string at line ${this.line}, column ${this.column}`);
+                }
+                
+                return new Token(TokenType.STRING, result, startLine, startColumn);
+            }
+
+            getNextToken() {
+                while (this.currentChar !== null) {
+                    if (/\s/.test(this.currentChar)) {
+                        this.skipWhitespace();
+                        continue;
+                    }
+
+                    if (this.currentChar === '/' && (this.peek() === '/' || this.peek() === '*')) {
+                        return this.skipComment();
+                    }
+
+                    if (/[a-zA-Z_]/.test(this.currentChar)) {
+                        return this.identifier();
+                    }
+
+                    if (/\d/.test(this.currentChar)) {
+                        return this.number();
+                    }
+
+                    if (this.currentChar === '"' || this.currentChar === "'") {
+                        return this.string();
+                    }
+
+                    if (/[+\-*/%=<>!&|^~]/.test(this.currentChar)) {
+                        let operator = this.currentChar;
+                        const startLine = this.line;
+                        const startColumn = this.column;
+                        this.advance();
+
+                        if (this.currentChar !== null) {
+                            const potentialOp = operator + this.currentChar;
+                            if (['==', '!=', '>=', '<=', '++', '--', '&&', '||', '+=', '-=', '*=', '/=', '%='].includes(potentialOp)) {
+                                operator = potentialOp;
+                                this.advance();
+                            }
+                        }
+                        
+                        return new Token(TokenType.OPERATOR, operator, startLine, startColumn);
+                    }
+
+                    if (/[(){}\[\];,.]/.test(this.currentChar)) {
+                        const token = new Token(TokenType.DELIMITER, this.currentChar, this.line, this.column);
+                        this.advance();
+                        return token;
+                    }
+
+                    throw new Error(`Unexpected character '${this.currentChar}' at line ${this.line}, column ${this.column}`);
+                }
+
+                return new Token(TokenType.EOF, null, this.line, this.column);
+            }
+
+            tokenize() {
+                const tokens = [];
+                let token = this.getNextToken();
+                
+                while (token.type !== TokenType.EOF) {
+                    tokens.push(token);
+                    token = this.getNextToken();
+                }
+                
+                return tokens;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const codeInput = document.getElementById('code-input');
+            const analyzeBtn = document.getElementById('analyze-btn');
+            const tokenList = document.getElementById('token-list');
+            const example1Btn = document.getElementById('example1');
+            const example2Btn = document.getElementById('example2');
+            const example3Btn = document.getElementById('example3');
+            const tabs = document.querySelectorAll('.tab');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            const examples = {
+                example1: `// Basic mathematical operations
+let x = 10;
+let y = 20.5;
+let z = (x + y) * 2;
+let result = z / 5;
+
+// Trigonometric functions
+let angle = 30;
+let sinValue = sin(angle);
+let cosValue = cos(angle);
+`,
+                example2: `// Function definition
+function calculateArea(radius) {
+    const PI = 3.14159;
+    return PI * radius * radius;
+}
+
+// Function calls
+let circleArea = calculateArea(5);
+let circleVolume = 4/3 * 3.14159 * 5 * 5 * 5;
+
+// Multiple functions
+function celsius2fahrenheit(c) {
+    return (c * 9/5) + 32;
+}
+`,
+                example3: `// Control flow example
+let temperature = 25;
+
+if (temperature > 30) {
+    console.log("It's hot!");
+} else if (temperature > 20) {
+    console.log("It's warm.");
+} else {
+    console.log("It's cool.");
+}
+
+// Loop example
+let counter = 0;
+while (counter < 5) {
+    counter++;
+    /* This is a 
+    multi-line comment */
+}
+`
+            };
+
+            function analyzeCode() {
+                try {
+                    const code = codeInput.value;
+                    const lexer = new Lexer(code);
+                    const tokens = lexer.tokenize();
+                    
+                    tokenList.innerHTML = '';
+
+                    tokens.forEach(token => {
+                        const row = document.createElement('tr');
+                        
+                        const typeCell = document.createElement('td');
+                        typeCell.textContent = token.type;
+                        typeCell.className = `token-${token.type.toLowerCase()}`;
+                        
+                        const valueCell = document.createElement('td');
+                        valueCell.textContent = token.value;
+                        
+                        const positionCell = document.createElement('td');
+                        positionCell.textContent = `${token.line}:${token.column}`;
+                        
+                        row.appendChild(typeCell);
+                        row.appendChild(valueCell);
+                        row.appendChild(positionCell);
+                        
+                        tokenList.appendChild(row);
+                    });
+                    
+                } catch (error) {
+                    alert(`Lexer error: ${error.message}`);
+                }
+            }
+
+            analyzeBtn.addEventListener('click', analyzeCode);
+
+            example1Btn.addEventListener('click', () => {
+                codeInput.value = examples.example1;
+            });
+            
+            example2Btn.addEventListener('click', () => {
+                codeInput.value = examples.example2;
+            });
+            
+            example3Btn.addEventListener('click', () => {
+                codeInput.value = examples.example3;
+            });
+            
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tabContents.forEach(c => c.classList.remove('active'));
+                    tab.classList.add('active');
+                    const tabId = `${tab.getAttribute('data-tab')}-tab`;
+                    document.getElementById(tabId).classList.add('active');
+                });
+            });
+            
+            // Load default example
+            codeInput.value = examples.example1;
+        });
+    </script>
+</body>
+</html>
