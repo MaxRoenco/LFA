@@ -28,7 +28,7 @@ Groups | `(ab)` | Bundle pattern parts
 
 The implementation follows a modular design with three principal components:
 
-![Regex System Architecture](screens/regex-architecture.png)
+![Regex System Architecture](../screens/regex-architecture.png)
 
 ### 2.1 Core Data Structure: RegexNode
 
