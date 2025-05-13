@@ -9,7 +9,7 @@ function main() {
         "1(0|1)*2(3|4){5}36"
     ];
     
-    console.log("Student Name, Nr. XX:");
+    console.log("Roenco Maxim, Nr. 4:");
     console.log("Var. 1");
     
     for (let i = 0; i < patterns.length; i++) {
